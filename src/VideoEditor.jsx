@@ -914,8 +914,11 @@ export default function VideoEditor() {
           </div>
         </div>
 
-        <div className="right-panel" style={styles.rightPanel}>
-          <div style={styles.panelTitle}>Thuộc tính</div>
+        <div className={`right-panel ${selectedClip ? 'open' : ''}`} style={styles.rightPanel}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ ...styles.panelTitle, marginBottom: 0 }}>Thuộc tính</div>
+            <button className="mobile-close-btn" style={{ ...styles.iconBtnSmall, display: 'none', background: 'transparent', border: 'none', color: '#8b8b96', fontSize: 18 }} onClick={() => setSelectedClipId(null)}>×</button>
+          </div>
           {!selectedClip && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={styles.emptyHint}>Chọn 1 clip trên timeline để chỉnh sửa thuộc tính, hoặc thiết lập khung hình cho video bên dưới.</div>

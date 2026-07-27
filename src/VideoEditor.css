@@ -36,8 +36,28 @@
   
   .right-panel {
     order: 4;
-    width: 100% !important;
-    border-left: none !important;
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    width: 85% !important;
+    max-width: 340px !important;
+    height: 100vh !important;
+    background: rgba(17, 17, 22, 0.75) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-left: 1px solid rgba(255,255,255,0.1) !important;
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  }
+  
+  .right-panel.open {
+    transform: translateX(0);
+  }
+  
+  .mobile-close-btn {
+    display: flex !important;
   }
   
   .timeline-toolbar {
