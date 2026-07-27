@@ -384,6 +384,9 @@ export default function VideoEditor() {
                 scale = isLater ? 1.18 - p * 0.18 : 1 + p * 0.18;
               } else if (transitionType === "slide") {
                 translateX = isLater ? (1 - p) * CANVAS_W : -p * CANVAS_W;
+              } else if (transitionType === "strobe") {
+                const strobePhase = Math.floor(time * 15) % 2;
+                alpha *= isLater ? strobePhase : 1 - strobePhase;
               }
             }
 
@@ -825,6 +828,7 @@ export default function VideoEditor() {
                   <option value="crossfade">Hoà tan (crossfade)</option>
                   <option value="slide">Trượt (push)</option>
                   <option value="zoom">Phóng to (zoom)</option>
+                  <option value="strobe">Giật chớp (strobe)</option>
                 </select>
                 <Slider label="Thời lượng chuyển cảnh (giây)" value={Math.round((selectedClip.transitionOutDuration || 0) * 10)} min={0} max={20} onChange={(v) => updateClip(selectedClip.id, { transitionOutDuration: v / 10 })} />
               </div>
