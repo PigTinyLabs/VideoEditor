@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { Play, Pause, Scissors, Type, Upload, Download, Trash2, Plus, Music, Film, Image as ImageIcon, Volume2, VolumeX, ZoomIn, ZoomOut } from "lucide-react";
 
 // ---------- constants ----------
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
 const PX_PER_SEC_BASE = 60;
 const TRACK_HEIGHT = 56;
 const MIN_CLIP_SEC = 0.2;
@@ -164,6 +162,29 @@ export default function VideoEditor() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearchingMusic, setIsSearchingMusic] = useState(false);
+  const [canvasRatio, setCanvasRatio] = useState("16:9");
+
+  const canvasW = canvasRatio === "9:16" ? 720 : canvasRatio === "1:1" ? 1080 : 1280;
+  const canvasH = canvasRatio === "9:16" ? 1280 : canvasRatio === "1:1" ? 1080 : 720;
+  const canvasSizeRef = useRef({ w: canvasW, h: canvasH });
+  useEffect(() => {
+    canvasSizeRef.current = { w: canvasW, h: canvasH };
+  }, [canvasW, canvasH]);
+
+  const drawMedia = (ctx, drawEl, cw, ch, fit) => {
+    const srcW = drawEl.videoWidth || drawEl.naturalWidth || drawEl.width;
+    const srcH = drawEl.videoHeight || drawEl.naturalHeight || drawEl.height;
+    if (!srcW || !srcH) {
+      ctx.drawImage(drawEl, 0, 0, cw, ch);
+      return;
+    }
+    const scale = fit === "contain" ? Math.min(cw / srcW, ch / srcH) : Math.max(cw / srcW, ch / srcH);
+    const destW = srcW * scale;
+    const destH = srcH * scale;
+    const destX = (cw - destW) / 2;
+    const destY = (ch - destH) / 2;
+    ctx.drawImage(drawEl, 0, 0, srcW, srcH, destX, destY, destW, destH);
+  };
 
   const canvasRef = useRef(null);
   const mediaPoolRef = useRef({}); // clipId -> {el, kind, gainNode?}
@@ -380,6 +401,8 @@ export default function VideoEditor() {
   // ---------- rendering ----------
   const renderFrame = useCallback(
     (time) => {
+      const CANVAS_W = canvasSizeRef.current.w;
+      const CANVAS_H = canvasSizeRef.current.h;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
@@ -476,7 +499,7 @@ export default function VideoEditor() {
             ctx.scale(currentScale, currentScale);
             if (rotation) ctx.rotate(rotation);
             ctx.translate(-CANVAS_W / 2 + currentTranslateX, -CANVAS_H / 2);
-            try { if (drawEl) ctx.drawImage(drawEl, 0, 0, CANVAS_W, CANVAS_H); } catch (e) {}
+            try { if (drawEl) drawMedia(ctx, drawEl, CANVAS_W, CANVAS_H, c.objectFit || "cover"); } catch (e) {}
             ctx.restore();
             if (f.vignette) {
               ctx.save();
@@ -757,6 +780,11 @@ export default function VideoEditor() {
       <div style={styles.topbar}>
         <div style={styles.logo}><Film size={18} color="#7c5cff" /><span>Vidly — trình chỉnh sửa video</span></div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <select style={{ ...styles.select, width: "auto", marginTop: 0, height: 32 }} value={canvasRatio} onChange={(e) => setCanvasRatio(e.target.value)}>
+            <option value="16:9">Ngang (16:9)</option>
+            <option value="9:16">Dọc (9:16)</option>
+            <option value="1:1">Vuông (1:1)</option>
+          </select>
           {exportUrl && (
             <a href={exportUrl} download="video-xuat.webm" style={styles.downloadLink}><Download size={14} /> Tải video đã xuất</a>
           )}
@@ -854,7 +882,7 @@ export default function VideoEditor() {
         </div>
 
         <div style={styles.centerPanel}>
-          <div style={styles.previewWrap}><canvas ref={canvasRef} width={CANVAS_W} height={CANVAS_H} style={styles.canvas} /></div>
+          <div style={{ ...styles.previewWrap, aspectRatio: canvasRatio.replace(':', '/') }}><canvas ref={canvasRef} width={canvasW} height={canvasH} style={styles.canvas} /></div>
           <div style={styles.transportBar}>
             <button style={styles.iconBtn} onClick={() => setIsPlaying((p) => !p)}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}</button>
             <button style={styles.iconBtn} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button>
@@ -887,6 +915,14 @@ export default function VideoEditor() {
               <Slider label="Làm mờ (blur)" value={selectedClip.filters.blur ?? 0} min={0} max={20} onChange={(v) => updateClip(selectedClip.id, { filters: { ...selectedClip.filters, blur: v }, preset: "custom" })} />
               <Slider label="Viền tối (vignette)" value={selectedClip.filters.vignette ?? 0} min={0} max={100} onChange={(v) => updateClip(selectedClip.id, { filters: { ...selectedClip.filters, vignette: v }, preset: "custom" })} />
               <Slider label="Độ mờ toàn clip (opacity)" value={selectedClip.opacity} min={0} max={100} onChange={(v) => updateClip(selectedClip.id, { opacity: v })} />
+
+              <div>
+                <div style={styles.fieldLabel}>Hiển thị (Object Fit)</div>
+                <select value={selectedClip.objectFit || "cover"} onChange={(e) => updateClip(selectedClip.id, { objectFit: e.target.value })} style={styles.select}>
+                  <option value="cover">Phủ kín (Cover)</option>
+                  <option value="contain">Vừa vặn (Contain)</option>
+                </select>
+              </div>
 
               <div>
                 <div style={styles.fieldLabel}>Hiệu ứng chuyển động (Animation)</div>
