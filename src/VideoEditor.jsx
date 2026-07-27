@@ -365,10 +365,11 @@ export default function VideoEditor() {
         el.src = clip.url;
       } else {
         el = document.createElement(kind === "audio" ? "audio" : "video");
-        el.src = clip.url;
+        el.crossOrigin = "anonymous";
         el.preload = "auto";
         el.muted = true;
         if (kind === "video") el.playsInline = true;
+        el.src = clip.url;
       }
       pooled = { el, kind };
       mediaPoolRef.current[clip.id] = pooled;
@@ -725,6 +726,9 @@ export default function VideoEditor() {
     const done = new Promise((resolve) => (recorder.onstop = resolve));
 
     recorder.start();
+    // Force un-muting during export so play() is called reliably
+    const prevMuted = muted;
+    setMuted(false);
     setIsPlaying(true);
     const startTs = performance.now();
     const tick = () => {
@@ -757,7 +761,16 @@ export default function VideoEditor() {
     setExportUrl(url);
     setIsExporting(false);
     setExportProgress(1);
+    setMuted(prevMuted);
+    
     if (audioCtx) audioCtx.close().catch(() => {});
+    
+    // Clear media pool so that elements trapped in the closed AudioContext are recreated
+    for (const k in mediaPoolRef.current) {
+      const p = mediaPoolRef.current[k];
+      if (p && p.kind !== "image" && !p.el.paused) p.el.pause();
+    }
+    mediaPoolRef.current = {};
   };
 
   const videoLib = library.filter((m) => m.kind === "video");
