@@ -903,7 +903,7 @@ export default function VideoEditor() {
         </div>
 
         <div style={styles.centerPanel}>
-          <div style={{ ...styles.previewWrap, aspectRatio: canvasRatio.replace(':', '/') }}><canvas ref={canvasRef} width={canvasW} height={canvasH} style={styles.canvas} /></div>
+          <div style={styles.previewWrap}><canvas ref={canvasRef} width={canvasW} height={canvasH} style={styles.canvas} /></div>
           <div style={styles.transportBar}>
             <button style={styles.iconBtn} onClick={() => setIsPlaying((p) => !p)}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}</button>
             <button style={styles.iconBtn} onClick={() => setMuted((m) => !m)}>{muted ? <VolumeX size={16} /> : <Volume2 size={16} />}</button>
@@ -1110,8 +1110,8 @@ const styles = {
   deleteFromLibBtn: { background: "transparent", border: "1px solid #4a2028", borderRadius: 6, color: "#ff8080", width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   emptyHint: { fontSize: 12, color: "#63636e", lineHeight: 1.5 },
   centerPanel: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, minWidth: 0 },
-  previewWrap: { width: "100%", maxWidth: 860, aspectRatio: "16/9", background: "#000", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.5)" },
-  canvas: { width: "100%", height: "100%", display: "block" },
+  previewWrap: { flex: 1, width: "100%", display: "flex", justifyContent: "center", alignItems: "center", minHeight: 0 },
+  canvas: { maxWidth: "100%", maxHeight: "100%", background: "#000", borderRadius: 10, boxShadow: "0 8px 30px rgba(0,0,0,0.5)", display: "block" },
   transportBar: { display: "flex", alignItems: "center", gap: 10, marginTop: 12 },
   iconBtn: { background: "#1d1d26", border: "1px solid #2f2f3a", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "#e8e8ee", cursor: "pointer" },
   iconBtnDanger: { background: "#2a1519", border: "1px solid #4a2028", borderRadius: 8, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "#ff8080", cursor: "pointer" },
