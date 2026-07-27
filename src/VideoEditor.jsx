@@ -718,8 +718,15 @@ export default function VideoEditor() {
     }
 
     const combined = new MediaStream([...canvasStream.getVideoTracks(), ...(audioDestination ? audioDestination.stream.getAudioTracks() : [])]);
-    let mimeType = "video/webm;codecs=vp9,opus";
-    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = "video/webm";
+    let mimeType = "video/mp4";
+    let ext = "mp4";
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = "video/webm;codecs=vp9,opus";
+      ext = "webm";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/webm";
+      }
+    }
     const recorder = new MediaRecorder(combined, { mimeType });
     const chunks = [];
     recorder.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data);
@@ -756,9 +763,9 @@ export default function VideoEditor() {
     requestAnimationFrame(tick);
 
     await done;
-    const blob = new Blob(chunks, { type: "video/webm" });
+    const blob = new Blob(chunks, { type: mimeType });
     const url = URL.createObjectURL(blob);
-    setExportUrl(url);
+    setExportUrl({ url, ext });
     setIsExporting(false);
     setExportProgress(1);
     setMuted(prevMuted);
@@ -800,7 +807,7 @@ export default function VideoEditor() {
             <option value="4:3">Chuẩn (4:3)</option>
           </select>
           {exportUrl && (
-            <a href={exportUrl} download="video-xuat.webm" style={styles.downloadLink}><Download size={14} /> Tải video đã xuất</a>
+            <a href={exportUrl.url} download={`video-xuat.${exportUrl.ext}`} style={styles.downloadLink}><Download size={14} /> Tải video đã xuất</a>
           )}
           <button style={styles.exportBtn} onClick={handleExport} disabled={isExporting}>
             {isExporting ? `Đang xuất ${(exportProgress * 100).toFixed(0)}%` : (<><Download size={14} /> Xuất video</>)}
