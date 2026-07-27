@@ -914,6 +914,8 @@ export default function VideoEditor() {
           </div>
         </div>
 
+        {selectedClip && <div className="mobile-overlay" onClick={() => setSelectedClipId(null)}></div>}
+
         <div className={`right-panel ${selectedClip ? 'open' : ''}`} style={styles.rightPanel}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <div style={{ ...styles.panelTitle, marginBottom: 0 }}>Thuộc tính</div>

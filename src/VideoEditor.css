@@ -1,3 +1,7 @@
+.mobile-overlay {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app-container {
     height: auto !important;
@@ -58,6 +62,17 @@
   
   .mobile-close-btn {
     display: flex !important;
+  }
+  
+  .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99;
+    background: transparent;
+    display: block;
   }
   
   .timeline-toolbar {
