@@ -1,0 +1,53 @@
+@media (max-width: 768px) {
+  .app-container {
+    height: auto !important;
+    min-height: 100vh;
+  }
+  
+  .main-row {
+    display: contents !important;
+  }
+  
+  .topbar {
+    order: 0;
+  }
+  
+  .center-panel {
+    order: 1;
+    width: 100% !important;
+    padding: 10px !important;
+    border-bottom: 1px solid #232329 !important;
+  }
+  
+  .timeline-panel {
+    order: 2;
+    height: auto !important;
+    min-height: 280px;
+    border-top: none !important;
+    border-bottom: 1px solid #232329 !important;
+  }
+  
+  .left-panel {
+    order: 3;
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #232329 !important;
+  }
+  
+  .right-panel {
+    order: 4;
+    width: 100% !important;
+    border-left: none !important;
+  }
+  
+  .timeline-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  /* Make sure right panel sliders don't overflow */
+  .right-panel input[type="range"] {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

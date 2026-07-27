@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Play, Pause, Scissors, Type, Upload, Download, Trash2, Plus, Music, Film, Image as ImageIcon, Volume2, VolumeX, ZoomIn, ZoomOut } from "lucide-react";
+import "./VideoEditor.css";
 
 // ---------- constants ----------
 const PX_PER_SEC_BASE = 60;
@@ -786,7 +787,7 @@ export default function VideoEditor() {
 
   // ---------- UI ----------
   return (
-    <div style={styles.app}>
+    <div className="app-container" style={styles.app}>
       <style>{`
         * { box-sizing: border-box; }
         input[type=range] { accent-color: #7c5cff; }
@@ -797,7 +798,7 @@ export default function VideoEditor() {
         .preset-btn:active { transform: scale(0.95); }
       `}</style>
 
-      <div style={styles.topbar}>
+      <div className="topbar" style={styles.topbar}>
         <div style={styles.logo}><Film size={18} color="#7c5cff" /><span>Vidly — trình chỉnh sửa video</span></div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <select style={{ ...styles.select, width: "auto", marginTop: 0, height: 32 }} value={canvasRatio} onChange={(e) => setCanvasRatio(e.target.value)}>
@@ -815,8 +816,8 @@ export default function VideoEditor() {
         </div>
       </div>
 
-      <div style={styles.mainRow}>
-        <div style={styles.leftPanel}>
+      <div className="main-row" style={styles.mainRow}>
+        <div className="left-panel" style={styles.leftPanel}>
           <div style={styles.panelTitle}>Thư viện</div>
           <button style={styles.uploadBtn} onClick={() => videoFileInputRef.current.click()}><Upload size={14} /> Nhập video</button>
           <input ref={videoFileInputRef} type="file" accept="video/*" multiple style={{ display: "none" }} onChange={(e) => handleVideoFiles(e.target.files)} />
@@ -902,7 +903,7 @@ export default function VideoEditor() {
           {library.length === 0 && <div style={styles.emptyHint}>Chưa có gì cả. Nhập video, ảnh hoặc nhạc để bắt đầu.</div>}
         </div>
 
-        <div style={styles.centerPanel}>
+        <div className="center-panel" style={styles.centerPanel}>
           <div style={styles.previewWrap}><canvas ref={canvasRef} width={canvasW} height={canvasH} style={styles.canvas} /></div>
           <div style={styles.transportBar}>
             <button style={styles.iconBtn} onClick={() => setIsPlaying((p) => !p)}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}</button>
@@ -913,7 +914,7 @@ export default function VideoEditor() {
           </div>
         </div>
 
-        <div style={styles.rightPanel}>
+        <div className="right-panel" style={styles.rightPanel}>
           <div style={styles.panelTitle}>Thuộc tính</div>
           {!selectedClip && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1027,8 +1028,8 @@ export default function VideoEditor() {
         </div>
       </div>
 
-      <div style={styles.timelinePanel}>
-        <div style={styles.timelineToolbar}>
+      <div className="timeline-panel" style={styles.timelinePanel}>
+        <div className="timeline-toolbar" style={styles.timelineToolbar}>
           <span style={{ color: "#8b8b96", fontSize: 12 }}>Timeline</span>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button style={styles.iconBtnSmall} onClick={() => setZoom((z) => clamp(z - 0.25, 0.25, 4))}><ZoomOut size={13} /></button>
