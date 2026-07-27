@@ -164,8 +164,8 @@ export default function VideoEditor() {
   const [isSearchingMusic, setIsSearchingMusic] = useState(false);
   const [canvasRatio, setCanvasRatio] = useState("16:9");
 
-  const canvasW = canvasRatio === "9:16" ? 720 : canvasRatio === "1:1" ? 1080 : 1280;
-  const canvasH = canvasRatio === "9:16" ? 1280 : canvasRatio === "1:1" ? 1080 : 720;
+  const canvasW = canvasRatio === "9:16" ? 720 : canvasRatio === "1:1" ? 1080 : canvasRatio === "4:3" ? 1440 : 1280;
+  const canvasH = canvasRatio === "9:16" ? 1280 : canvasRatio === "1:1" ? 1080 : canvasRatio === "4:3" ? 1080 : 720;
   const canvasSizeRef = useRef({ w: canvasW, h: canvasH });
   useEffect(() => {
     canvasSizeRef.current = { w: canvasW, h: canvasH };
@@ -784,6 +784,7 @@ export default function VideoEditor() {
             <option value="16:9">Ngang (16:9)</option>
             <option value="9:16">Dọc (9:16)</option>
             <option value="1:1">Vuông (1:1)</option>
+            <option value="4:3">Chuẩn (4:3)</option>
           </select>
           {exportUrl && (
             <a href={exportUrl} download="video-xuat.webm" style={styles.downloadLink}><Download size={14} /> Tải video đã xuất</a>
@@ -894,8 +895,21 @@ export default function VideoEditor() {
 
         <div style={styles.rightPanel}>
           <div style={styles.panelTitle}>Thuộc tính</div>
-          {!selectedClip && <div style={styles.emptyHint}>Chọn 1 clip trên timeline để chỉnh sửa.</div>}
-
+          {!selectedClip && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={styles.emptyHint}>Chọn 1 clip trên timeline để chỉnh sửa thuộc tính, hoặc thiết lập khung hình cho video bên dưới.</div>
+              <div>
+                <div style={styles.fieldLabel}>Tỷ lệ khung hình video</div>
+                <select style={styles.select} value={canvasRatio} onChange={(e) => setCanvasRatio(e.target.value)}>
+                  <option value="16:9">16:9 (Ngang) - YouTube, Facebook</option>
+                  <option value="9:16">9:16 (Dọc điện thoại) - TikTok, Shorts, Reels</option>
+                  <option value="1:1">1:1 (Vuông) - Instagram</option>
+                  <option value="4:3">4:3 (Màn hình chuẩn)</option>
+                </select>
+              </div>
+            </div>
+          )}
+          
           {selectedClip && selectedClip.trackType === "video" && (selectedClip.kind === "video" || selectedClip.kind === "image") && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -979,7 +993,7 @@ export default function VideoEditor() {
           )}
 
           {selectedClip && selectedClip.trackType === "text" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <label style={styles.fieldLabel}>Nội dung</label>
               <textarea value={selectedClip.text} onChange={(e) => updateClip(selectedClip.id, { text: e.target.value })} style={styles.textArea} />
               <Slider label="Cỡ chữ" value={selectedClip.fontSize} min={12} max={120} onChange={(v) => updateClip(selectedClip.id, { fontSize: v })} />
