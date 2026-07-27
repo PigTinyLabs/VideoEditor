@@ -161,6 +161,9 @@ export default function VideoEditor() {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportUrl, setExportUrl] = useState(null);
   const [muted, setMuted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingMusic, setIsSearchingMusic] = useState(false);
 
   const canvasRef = useRef(null);
   const mediaPoolRef = useRef({}); // clipId -> {el, kind, gainNode?}
@@ -219,6 +222,30 @@ export default function VideoEditor() {
       const url = URL.createObjectURL(file);
       setLibrary((lib) => [...lib, { id: uid(), name: file.name, url, duration: null, kind: "image" }]);
     });
+  }, []);
+
+  const searchMusic = useCallback(async () => {
+    if (!searchQuery.trim()) return;
+    setIsSearchingMusic(true);
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=15`);
+      const data = await res.json();
+      setSearchResults(data.results || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSearchingMusic(false);
+    }
+  }, [searchQuery]);
+
+  const addOnlineMusicToLibrary = useCallback((track) => {
+    if (!track.previewUrl) return;
+    const a = document.createElement("audio");
+    a.preload = "metadata";
+    a.src = track.previewUrl;
+    a.onloadedmetadata = () => {
+      setLibrary((lib) => [...lib, { id: uid(), name: `${track.trackName} - ${track.artistName}`, url: track.previewUrl, duration: a.duration || 30, kind: "audio" }]);
+    };
   }, []);
 
   const addClipToTrack = useCallback((trackId, mediaItem) => {
@@ -734,6 +761,26 @@ export default function VideoEditor() {
           <button style={styles.uploadBtn} onClick={() => videoFileInputRef.current.click()}><Upload size={14} /> Nhập video</button>
           <input ref={videoFileInputRef} type="file" accept="video/*" multiple style={{ display: "none" }} onChange={(e) => handleVideoFiles(e.target.files)} />
           <button style={{ ...styles.uploadBtn, marginTop: 8 }} onClick={() => audioFileInputRef.current.click()}><Music size={14} /> Nhập nhạc</button>
+          
+          <div style={{ marginTop: 8, display: "flex", gap: 4 }}>
+            <input type="text" placeholder="Tìm nhạc online..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === "Enter" && searchMusic()} style={styles.searchInput} />
+            <button style={styles.searchBtn} onClick={searchMusic} disabled={isSearchingMusic}>{isSearchingMusic ? "..." : "Tìm"}</button>
+          </div>
+          {searchResults.length > 0 && (
+            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4, maxHeight: 150, overflowY: "auto", background: "#181820", padding: 4, borderRadius: 6 }}>
+              {searchResults.map((t) => (
+                <div key={t.trackId} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, cursor: "pointer", padding: 4 }} onClick={() => addOnlineMusicToLibrary(t)}>
+                  {t.artworkUrl30 && <img src={t.artworkUrl30} style={{ width: 24, height: 24, borderRadius: 4 }} alt="" />}
+                  <div style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <div style={{ color: "#fff" }}>{t.trackName}</div>
+                    <div style={{ color: "#8b8b96" }}>{t.artistName}</div>
+                  </div>
+                  <Plus size={12} color="#7c5cff" />
+                </div>
+              ))}
+            </div>
+          )}
+
           <input ref={audioFileInputRef} type="file" accept="audio/*" multiple style={{ display: "none" }} onChange={(e) => handleAudioFiles(e.target.files)} />
           <button style={{ ...styles.uploadBtn, marginTop: 8 }} onClick={() => imageFileInputRef.current.click()}><ImageIcon size={14} /> Nhập hình ảnh</button>
           <input ref={imageFileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => handleImageFiles(e.target.files)} />
@@ -963,6 +1010,8 @@ const styles = {
   groupLabel: { fontSize: 11, color: "#63636e", margin: "10px 0 4px" },
   uploadBtn: { display: "flex", alignItems: "center", gap: 6, justifyContent: "center", width: "100%", padding: "9px 10px", background: "#1d1d26", border: "1px solid #2f2f3a", borderRadius: 8, color: "#e8e8ee", cursor: "pointer", fontSize: 13 },
   uploadBtnAlt: { display: "flex", alignItems: "center", gap: 6, justifyContent: "center", width: "100%", padding: "9px 10px", marginTop: 8, background: "transparent", border: "1px dashed #3a3a46", borderRadius: 8, color: "#c7c7d1", cursor: "pointer", fontSize: 13 },
+  searchInput: { flex: 1, background: "#1d1d26", border: "1px solid #2f2f3a", borderRadius: 8, color: "#e8e8ee", padding: "6px 10px", fontSize: 12, minWidth: 0, outline: "none" },
+  searchBtn: { background: "#7c5cff", border: "none", borderRadius: 8, color: "#fff", padding: "6px 10px", fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" },
   mediaItem: { display: "flex", alignItems: "center", gap: 8, background: "#181820", padding: 8, borderRadius: 8, border: "1px solid #24242c" },
   mediaThumb: { width: 36, height: 36, borderRadius: 6, background: "#20202a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   mediaName: { fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
