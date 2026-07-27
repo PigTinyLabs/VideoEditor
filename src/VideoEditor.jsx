@@ -420,9 +420,24 @@ export default function VideoEditor() {
             ctx.globalAlpha = clamp(alpha, 0, 1);
             const f = c.filters || {};
             ctx.filter = `brightness(${f.brightness ?? 100}%) contrast(${f.contrast ?? 100}%) saturate(${f.saturation ?? 100}%) blur(${f.blur ?? 0}px)`;
+            
+            let rotation = 0;
+            let currentTranslateX = translateX;
+            let currentScale = scale;
+            if (c.motionEffect === "swing") {
+              rotation = Math.sin(time * Math.PI * 2 * 0.5) * (5 * Math.PI / 180);
+              currentScale *= 1.1;
+            } else if (c.motionEffect === "shake") {
+              currentTranslateX += (Math.random() - 0.5) * 20;
+              currentScale *= 1.05;
+            } else if (c.motionEffect === "pulse") {
+              currentScale *= 1 + 0.1 * Math.sin(time * Math.PI * 2 * 1);
+            }
+
             ctx.translate(CANVAS_W / 2, CANVAS_H / 2);
-            ctx.scale(scale, scale);
-            ctx.translate(-CANVAS_W / 2 + translateX, -CANVAS_H / 2);
+            ctx.scale(currentScale, currentScale);
+            if (rotation) ctx.rotate(rotation);
+            ctx.translate(-CANVAS_W / 2 + currentTranslateX, -CANVAS_H / 2);
             try { if (drawEl) ctx.drawImage(drawEl, 0, 0, CANVAS_W, CANVAS_H); } catch (e) {}
             ctx.restore();
             if (f.vignette) {
@@ -805,6 +820,16 @@ export default function VideoEditor() {
               <Slider label="Làm mờ (blur)" value={selectedClip.filters.blur ?? 0} min={0} max={20} onChange={(v) => updateClip(selectedClip.id, { filters: { ...selectedClip.filters, blur: v }, preset: "custom" })} />
               <Slider label="Viền tối (vignette)" value={selectedClip.filters.vignette ?? 0} min={0} max={100} onChange={(v) => updateClip(selectedClip.id, { filters: { ...selectedClip.filters, vignette: v }, preset: "custom" })} />
               <Slider label="Độ mờ toàn clip (opacity)" value={selectedClip.opacity} min={0} max={100} onChange={(v) => updateClip(selectedClip.id, { opacity: v })} />
+
+              <div>
+                <div style={styles.fieldLabel}>Hiệu ứng chuyển động (Animation)</div>
+                <select value={selectedClip.motionEffect || "none"} onChange={(e) => updateClip(selectedClip.id, { motionEffect: e.target.value })} style={styles.select}>
+                  <option value="none">Không có</option>
+                  <option value="swing">Đung đưa (swing)</option>
+                  <option value="shake">Rung lắc (shake)</option>
+                  <option value="pulse">Nhịp đập (pulse)</option>
+                </select>
+              </div>
 
               {selectedClip.kind === "video" && (
                 <div>
