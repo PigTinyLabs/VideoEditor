@@ -240,13 +240,20 @@ export default function VideoEditor() {
 
   const addOnlineMusicToLibrary = useCallback((track) => {
     if (!track.previewUrl) return;
+    if (library.some(m => m.url === track.previewUrl)) {
+      alert("Bài hát này đã có trong Thư viện!");
+      return;
+    }
     const a = document.createElement("audio");
     a.preload = "metadata";
     a.src = track.previewUrl;
     a.onloadedmetadata = () => {
-      setLibrary((lib) => [...lib, { id: uid(), name: `${track.trackName} - ${track.artistName}`, url: track.previewUrl, duration: a.duration || 30, kind: "audio" }]);
+      setLibrary((lib) => {
+        if (lib.some(m => m.url === track.previewUrl)) return lib;
+        return [...lib, { id: uid(), name: `${track.trackName} - ${track.artistName}`, url: track.previewUrl, duration: a.duration || 30, kind: "audio" }];
+      });
     };
-  }, []);
+  }, [library]);
 
   const addClipToTrack = useCallback((trackId, mediaItem) => {
     setTracks((prev) =>
