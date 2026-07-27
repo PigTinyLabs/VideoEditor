@@ -255,6 +255,10 @@ export default function VideoEditor() {
     };
   }, [library]);
 
+  const deleteFromLibrary = useCallback((id) => {
+    setLibrary((lib) => lib.filter(m => m.id !== id));
+  }, []);
+
   const addClipToTrack = useCallback((trackId, mediaItem) => {
     setTracks((prev) =>
       prev.map((t) => {
@@ -802,7 +806,10 @@ export default function VideoEditor() {
                   <div style={styles.mediaName}>{m.name}</div>
                   <div style={styles.mediaMeta}>{fmtTime(m.duration)}</div>
                 </div>
-                <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "video").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "video").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                  <button style={styles.deleteFromLibBtn} onClick={() => deleteFromLibrary(m.id)} title="Xoá khỏi thư viện"><Trash2 size={14} /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -816,7 +823,10 @@ export default function VideoEditor() {
                   <div style={styles.mediaName}>{m.name}</div>
                   <div style={styles.mediaMeta}>{fmtTime(m.duration)}</div>
                 </div>
-                <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "audio").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "audio").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                  <button style={styles.deleteFromLibBtn} onClick={() => deleteFromLibrary(m.id)} title="Xoá khỏi thư viện"><Trash2 size={14} /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -832,7 +842,10 @@ export default function VideoEditor() {
                   <div style={styles.mediaName}>{m.name}</div>
                   <div style={styles.mediaMeta}>Ảnh tĩnh</div>
                 </div>
-                <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "video").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button style={styles.addToTrackBtn} onClick={() => addClipToTrack(tracks.find((t) => t.type === "video").id, m)} title="Thêm vào timeline"><Plus size={14} /></button>
+                  <button style={styles.deleteFromLibBtn} onClick={() => deleteFromLibrary(m.id)} title="Xoá khỏi thư viện"><Trash2 size={14} /></button>
+                </div>
               </div>
             ))}
           </div>
@@ -1023,7 +1036,8 @@ const styles = {
   mediaThumb: { width: 36, height: 36, borderRadius: 6, background: "#20202a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   mediaName: { fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   mediaMeta: { fontSize: 11, color: "#8b8b96" },
-  addToTrackBtn: { background: "#2a2a36", border: "none", borderRadius: 6, color: "#fff", width: 26, height: 26, cursor: "pointer" },
+  addToTrackBtn: { background: "#2a2a36", border: "none", borderRadius: 6, color: "#fff", width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  deleteFromLibBtn: { background: "transparent", border: "1px solid #4a2028", borderRadius: 6, color: "#ff8080", width: 26, height: 26, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
   emptyHint: { fontSize: 12, color: "#63636e", lineHeight: 1.5 },
   centerPanel: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, minWidth: 0 },
   previewWrap: { width: "100%", maxWidth: 860, aspectRatio: "16/9", background: "#000", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.5)" },
