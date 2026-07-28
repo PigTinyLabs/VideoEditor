@@ -678,6 +678,22 @@ export default function VideoEditor() {
     setCurrentTime(t);
   };
 
+  const touchStateRef = useRef({ dist: 0, zoom: 1 });
+  const handleTimelineTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      touchStateRef.current = { dist, zoom };
+    }
+  };
+  const handleTimelineTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      const scale = dist / touchStateRef.current.dist;
+      setZoom(clamp(touchStateRef.current.zoom * scale, 0.25, 4));
+    }
+  };
+
+
   // ---------- export ----------
   const handleExport = async () => {
     setIsExporting(true);
@@ -1042,7 +1058,7 @@ export default function VideoEditor() {
             <button style={styles.iconBtnSmall} onClick={() => setZoom((z) => clamp(z + 0.25, 0.25, 4))}><ZoomIn size={13} /></button>
           </div>
         </div>
-        <div style={styles.timelineScroll} onClick={onTimelineClick}>
+        <div style={styles.timelineScroll} onClick={onTimelineClick} onTouchStart={handleTimelineTouchStart} onTouchMove={handleTimelineTouchMove}>
           <div style={{ position: "relative", width: Math.max(600, duration * pxPerSec + 200) }}>
             <div style={styles.ruler}>
               {Array.from({ length: Math.ceil(duration) + 1 }).map((_, i) => (
