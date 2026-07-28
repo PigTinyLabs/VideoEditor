@@ -36,15 +36,18 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-function layoutTrack(clips) {
+function layoutTrack(clips, isMagnetic = true) {
+  if (!isMagnetic) {
+    return clips.map(c => ({ ...c, end: (c.start || 0) + c.duration }));
+  }
   const sorted = [...clips].sort((a, b) => a.order - b.order);
-  let out = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const c = sorted[i];
-    const prev = out[i - 1];
+  const out = [];
+  let prev = null;
+  for (const c of sorted) {
     const overlap = prev ? Math.min(prev.transitionOutDuration || 0, c.duration, prev.duration) : 0;
     const start = prev ? prev.start + prev.duration - overlap : 0;
     out.push({ ...c, start, end: start + c.duration });
+    prev = out[out.length - 1];
   }
   return out;
 }
@@ -52,7 +55,7 @@ function layoutTrack(clips) {
 function totalDurationOf(tracks) {
   let max = 0;
   for (const t of tracks) {
-    const laid = layoutTrack(t.clips);
+    const laid = layoutTrack(t.clips, t.type === "video");
     for (const c of laid) max = Math.max(max, c.end);
   }
   return max;
@@ -69,7 +72,7 @@ function fadeMultiplier(time, clip) {
   return m;
 }
 
-function makeVideoClip(mediaItem, order) {
+function makeVideoClip(mediaItem, order, start = 0) {
   return {
     kind: "video",
     id: uid(),
@@ -78,8 +81,8 @@ function makeVideoClip(mediaItem, order) {
     sourceDuration: mediaItem.duration,
     inPoint: 0,
     outPoint: mediaItem.duration,
-    speed: 1,
     duration: mediaItem.duration,
+    start,
     order,
     preset: "none",
     filters: { ...EFFECT_PRESETS.none },
@@ -91,7 +94,7 @@ function makeVideoClip(mediaItem, order) {
   };
 }
 
-function makeAudioClip(mediaItem, order) {
+function makeAudioClip(mediaItem, order, start = 0) {
   return {
     kind: "audio",
     id: uid(),
@@ -101,6 +104,7 @@ function makeAudioClip(mediaItem, order) {
     inPoint: 0,
     outPoint: mediaItem.duration,
     duration: mediaItem.duration,
+    start,
     order,
     volume: 80,
     fadeIn: 0.3,
@@ -109,13 +113,14 @@ function makeAudioClip(mediaItem, order) {
   };
 }
 
-function makeImageClip(mediaItem, order) {
+function makeImageClip(mediaItem, order, start = 0) {
   return {
     kind: "image",
     id: uid(),
     mediaId: mediaItem.id,
     url: mediaItem.url,
     duration: 3,
+    start,
     order,
     preset: "none",
     filters: { ...EFFECT_PRESETS.none },
@@ -201,7 +206,7 @@ export default function VideoEditor() {
   const duration = useMemo(() => Math.max(1, totalDurationOf(tracks)), [tracks]);
   const pxPerSec = PX_PER_SEC_BASE * zoom;
 
-  const laidOutTracks = useMemo(() => tracks.map((t) => ({ ...t, laid: layoutTrack(t.clips) })), [tracks]);
+  const laidOutTracks = useMemo(() => tracks.map((t) => ({ ...t, laid: layoutTrack(t.clips, t.type === "video") })), [tracks]);
 
   const selectedClip = useMemo(() => {
     for (const t of laidOutTracks) {
@@ -288,10 +293,10 @@ export default function VideoEditor() {
         const maxOrder = t.clips.reduce((m, c) => Math.max(m, c.order), -1);
         const clip =
           mediaItem.kind === "audio"
-            ? makeAudioClip(mediaItem, maxOrder + 1)
+            ? makeAudioClip(mediaItem, maxOrder + 1, currentTime)
             : mediaItem.kind === "image"
-            ? makeImageClip(mediaItem, maxOrder + 1)
-            : makeVideoClip(mediaItem, maxOrder + 1);
+            ? makeImageClip(mediaItem, maxOrder + 1, currentTime)
+            : makeVideoClip(mediaItem, maxOrder + 1, currentTime);
         return { ...t, clips: [...t.clips, clip] };
       })
     );
@@ -328,7 +333,7 @@ export default function VideoEditor() {
   const splitClipAt = useCallback((clipId, timeAbs) => {
     setTracks((prev) =>
       prev.map((t) => {
-        const laid = layoutTrack(t.clips);
+        const laid = layoutTrack(t.clips, t.type === "video");
         const target = laid.find((c) => c.id === clipId);
         if (!target) return t;
         const offset = timeAbs - target.start;
@@ -617,18 +622,56 @@ export default function VideoEditor() {
     const d = dragRef.current;
     if (!d) return;
     const deltaSec = (e.clientX - d.startX) / pxPerSec;
-    setTracks((prev) =>
-      prev.map((t) => {
+    setTracks((prev) => {
+      // Find snap points
+      const pts = [0, currentTime];
+      for (const t of prev) {
+        const laid = layoutTrack(t.clips, t.type === "video");
+        for (const c of laid) {
+          if (c.id === d.clipId) continue;
+          pts.push(c.start, c.end);
+        }
+      }
+      const snap = (time) => {
+        let best = time;
+        let minD = 0.3; // 0.3 seconds snap threshold
+        for (const p of pts) {
+          const dist = Math.abs(time - p);
+          if (dist < minD) { minD = dist; best = p; }
+        }
+        return best;
+      };
+
+      return prev.map((t) => {
         if (t.id !== d.trackId) return t;
+        const isMagnetic = t.type === "video";
         return {
           ...t,
           clips: t.clips.map((c) => {
             if (c.id !== d.clipId) return c;
-            if (d.mode === "move") return c;
+            
+            if (d.mode === "move") {
+              if (isMagnetic) return c;
+              const rawStart = Math.max(0, d.origStart + deltaSec);
+              const snappedStart = snap(rawStart);
+              const rawEnd = rawStart + c.duration;
+              const snappedEnd = snap(rawEnd);
+              let finalStart = rawStart;
+              if (Math.abs(snappedStart - rawStart) < Math.abs(snappedEnd - rawEnd)) {
+                finalStart = snappedStart;
+              } else if (Math.abs(snappedEnd - rawEnd) < 0.3) {
+                finalStart = snappedEnd - c.duration;
+              }
+              return { ...c, start: Math.max(0, finalStart) };
+            }
+
             const hasSource = c.kind === "video" || c.kind === "audio";
             if (d.mode === "trim-right") {
               const maxDur = hasSource ? (c.sourceDuration - d.origIn) / d.speed : 999;
-              const newDur = clamp(d.origDuration + deltaSec, MIN_CLIP_SEC, maxDur);
+              const rawEnd = d.origStart + d.origDuration + deltaSec;
+              const snappedEnd = snap(rawEnd);
+              let newDur = snappedEnd - d.origStart;
+              newDur = clamp(newDur, MIN_CLIP_SEC, maxDur);
               const patch = { duration: newDur };
               if (hasSource) patch.outPoint = d.origIn + newDur * d.speed;
               return { ...c, ...patch };
@@ -636,17 +679,29 @@ export default function VideoEditor() {
             if (d.mode === "trim-left") {
               const maxShrink = d.origDuration - MIN_CLIP_SEC;
               const minShrink = hasSource ? -d.origIn / d.speed : -999;
-              const shrink = clamp(deltaSec, minShrink, maxShrink);
-              const newDur = d.origDuration - shrink;
-              const patch = { duration: newDur };
-              if (hasSource) patch.inPoint = clamp(d.origIn + shrink * d.speed, 0, c.sourceDuration);
-              return { ...c, ...patch };
+              if (!isMagnetic) {
+                const rawStart = d.origStart + deltaSec;
+                const snappedStart = snap(rawStart);
+                const shrink = snappedStart - d.origStart;
+                const finalShrink = clamp(shrink, minShrink, maxShrink);
+                const newDur = d.origDuration - finalShrink;
+                const newStart = d.origStart + finalShrink;
+                const patch = { duration: newDur, start: newStart };
+                if (hasSource) patch.inPoint = clamp(d.origIn + finalShrink * d.speed, 0, c.sourceDuration);
+                return { ...c, ...patch };
+              } else {
+                const shrink = clamp(deltaSec, minShrink, maxShrink);
+                const newDur = d.origDuration - shrink;
+                const patch = { duration: newDur };
+                if (hasSource) patch.inPoint = clamp(d.origIn + shrink * d.speed, 0, c.sourceDuration);
+                return { ...c, ...patch };
+              }
             }
             return c;
           }),
         };
-      })
-    );
+      });
+    });
   };
 
   const onDragUp = (e) => {
@@ -657,6 +712,7 @@ export default function VideoEditor() {
         setTracks((prev) =>
           prev.map((t) => {
             if (t.id !== d.trackId) return t;
+            if (t.type !== "video") return t; // Only magnetic tracks swap order
             const sorted = [...t.clips].sort((a, b) => a.order - b.order);
             const idx = sorted.findIndex((c) => c.id === d.clipId);
             const swapIdx = deltaSec > 0 ? idx + 1 : idx - 1;
@@ -761,7 +817,7 @@ export default function VideoEditor() {
       // keep gain nodes in sync with fades during export
       for (const t of tracks) {
         if (t.type !== "audio") continue;
-        const laid = layoutTrack(t.clips);
+        const laid = layoutTrack(t.clips, t.type === "video");
         for (const c of laid) {
           const pooled = mediaPoolRef.current[c.id];
           if (pooled && pooled.gainNode) {
@@ -1072,16 +1128,30 @@ export default function VideoEditor() {
               <div key={t.id} style={{ ...styles.trackRow, background: t.type === "text" ? "#20161f" : t.type === "audio" ? "#132018" : "#17171d" }}>
                 <div style={styles.trackLabel}>{t.name}</div>
                 {t.laid.map((c) => (
-                  <div key={c.id} onMouseDown={(e) => onClipMouseDown(e, c, t.id, "move")}
-                    style={{
-                      ...styles.clip, left: c.start * pxPerSec, width: Math.max(4, c.duration * pxPerSec),
-                      background: t.type === "text" ? "#5b3a8f" : t.type === "audio" ? "#2f8f5b" : c.kind === "image" ? "#8f6a2f" : selectedClipId === c.id ? "#7c5cff" : "#3d3d8f",
-                      outline: selectedClipId === c.id ? "2px solid #b3a1ff" : "none",
-                    }}>
-                    {t.type !== "text" && <div style={styles.trimHandleLeft} onMouseDown={(e) => onClipMouseDown(e, c, t.id, "trim-left")} />}
-                    <div style={styles.clipLabel}>{t.type === "text" ? c.text : t.type === "audio" ? "🎵 Nhạc" : c.kind === "image" ? "🖼 Ảnh" : "Video"}</div>
-                    {t.type !== "text" && <div style={styles.trimHandleRight} onMouseDown={(e) => onClipMouseDown(e, c, t.id, "trim-right")} />}
-                  </div>
+                  <React.Fragment key={c.id}>
+                    {selectedClipId === c.id && c.sourceDuration != null && (
+                      <div style={{
+                        position: "absolute",
+                        top: 4, height: 40,
+                        left: (c.start - (c.inPoint || 0) / (c.speed || 1)) * pxPerSec,
+                        width: (c.sourceDuration / (c.speed || 1)) * pxPerSec,
+                        background: "rgba(255, 255, 255, 0.1)",
+                        borderRadius: 4,
+                        border: "1px dashed rgba(255, 255, 255, 0.3)",
+                        pointerEvents: "none"
+                      }} />
+                    )}
+                    <div onMouseDown={(e) => onClipMouseDown(e, c, t.id, "move")}
+                      style={{
+                        ...styles.clip, left: c.start * pxPerSec, width: Math.max(4, c.duration * pxPerSec),
+                        background: t.type === "text" ? "#5b3a8f" : t.type === "audio" ? "#2f8f5b" : c.kind === "image" ? "#8f6a2f" : selectedClipId === c.id ? "#7c5cff" : "#3d3d8f",
+                        outline: selectedClipId === c.id ? "2px solid #b3a1ff" : "none",
+                      }}>
+                      {t.type !== "text" && <div style={styles.trimHandleLeft} onMouseDown={(e) => onClipMouseDown(e, c, t.id, "trim-left")} />}
+                      <div style={styles.clipLabel}>{t.type === "text" ? c.text : t.type === "audio" ? "🎵 Nhạc" : c.kind === "image" ? "🖼 Ảnh" : "Video"}</div>
+                      {t.type !== "text" && <div style={styles.trimHandleRight} onMouseDown={(e) => onClipMouseDown(e, c, t.id, "trim-right")} />}
+                    </div>
+                  </React.Fragment>
                 ))}
               </div>
             ))}
